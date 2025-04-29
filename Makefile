@@ -8,7 +8,7 @@ HLS4ML_INCLUDE := $(EMULATOR_EXTRAS)/include/hls4ml
 INCLUDES := -I$(HLS4ML_INCLUDE) -I$(AP_TYPES) -I$(HLS_ROOT)/include
 #LD_FLAGS := -L$(EMULATOR_EXTRAS)/lib64 -
 LD_FLAGS := -L$(EMULATOR_EXTRAS)/lib64 -lemulator_interface
-ALL_VERSIONS:=L1TSC4NGJetModel_v0/L1TSC4NGJetModel_v0.so
+ALL_VERSIONS:=L1TSC4NGJetModel_test/L1TSC4NGJetModel_test.so
 
 
 .DEFAULT_GOAL := all
