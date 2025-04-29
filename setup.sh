@@ -8,11 +8,11 @@ sed -i "s/#include <cstdio>/#include <cstdio>\n\nnamespace hls4ml_L1TSC4NGJetMod
 echo '}' >> ${TARGET}/defines.h
 
 cp $SRC/L1TSC4NGJetModel_$VERSION.cpp   ${TARGET}/L1TSC4NGJetModel_$VERSION.cpp
-sed -i "s/void L1TSC4NGJetModel(/namespace hls4ml_L1TSC4NGJetModel_$VERSION {\nvoid L1TSC4NGJetModel(/" ${TARGET}/L1TSC4NGJetModel_$VERSION.cpp
+sed -i "s/void L1TSC4NGJetModel_$VERSION(/namespace hls4ml_L1TSC4NGJetModel_$VERSION {\nvoid L1TSC4NGJetModel_$VERSION(/" ${TARGET}/L1TSC4NGJetModel_$VERSION.cpp
 echo '}' >> ${TARGET}/L1TSC4NGJetModel_$VERSION.cpp
 
 cp    $SRC/L1TSC4NGJetModel_$VERSION.h   ${TARGET}/L1TSC4NGJetModel_$VERSION.h
-sed -i "s/void L1TSC4NGJetModel(/namespace hls4ml_L1TSC4NGJetModel_$VERSION {\nvoid L1TSC4NGJetModel(/" ${TARGET}/L1TSC4NGJetModel_$VERSION.h
+sed -i "s/void L1TSC4NGJetModel_$VERSION(/namespace hls4ml_L1TSC4NGJetModel_$VERSION {\nvoid L1TSC4NGJetModel_$VERSION(/" ${TARGET}/L1TSC4NGJetModel_$VERSION.h
 sed -i "s/#endif/}\n\n#endif/" ${TARGET}/L1TSC4NGJetModel_$VERSION.h
 
 cp -r $SRC/nnet_utils ${TARGET}
@@ -24,11 +24,14 @@ sed -i "s/#endif/}\n\n#endif/" ${TARGET}/parameters.h
 cp -r $SRC/weights ${TARGET}
 for filename in ${TARGET}/weights/*.h; do
     echo $filename
-    sed -i '8 a namespace hls4ml_L1TSC4NGJetModel_$VERSION {' $filename
+    sed -i "8 a namespace hls4ml_L1TSC4NGJetModel_$VERSION {" $filename
     echo '}' >> $filename
 done
 
 rm ${TARGET}/weights/*.txt
+
+# change the way the weights are read
+find ./${TARGET} \( -type d -name .git -prune \) -o -type f -print0 | xargs -0 sed -i 's/#ifndef __SYNTHESIS__/#ifdef __HLS4ML_LOAD_TXT_WEIGHTS__/'
 
 # change the way the weights are read
 find ./${TARGET} \( -type d -name .git -prune \) -o -type f -print0 | xargs -0 sed -i 's/#ifndef __SYNTHESIS__/#ifdef __HLS4ML_LOAD_TXT_WEIGHTS__/'
