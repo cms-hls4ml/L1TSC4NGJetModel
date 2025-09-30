@@ -12,8 +12,8 @@ using namespace hls4ml_L1TSC4NGJetModel_test;
 class L1TSC4NGJetModel_emulator_test : public hls4mlEmulator::Model{
     private:
         input_t _input[N_INPUT_1_1*N_INPUT_2_1];
-        layer25_t _layer25_out[N_LAYER_22]; // reg out
-        layer24_t _layer24_out[N_LAYER_20]; // class out
+        layer24_t _layer24_out[N_LAYER_23]; // reg out
+        layer22_t _layer22_out[N_LAYER_19]; // class out
     public:
 
 
@@ -29,18 +29,18 @@ class L1TSC4NGJetModel_emulator_test : public hls4mlEmulator::Model{
 
         virtual void predict()
         {
-            L1TSC4NGJetModel_test(_input, _layer24_out, _layer25_out);
+            L1TSC4NGJetModel_test(_input, _layer22_out, _layer24_out);
             
         }
 
         virtual void read_result(std::any result)
         { 
-            std::pair<std::array<layer25_t,N_LAYER_22>,std::array<layer24_t,N_LAYER_20>> *result_p = std::any_cast<std::pair<std::array<layer25_t,N_LAYER_22>,std::array<layer24_t,N_LAYER_20>>*>(result);
-            for (int i = 0; i < N_LAYER_22; ++i ){
-                result_p->first[i] = _layer25_out[i];  
+            std::pair<std::array<layer24_t,N_LAYER_23>,std::array<layer22_t,N_LAYER_19>> *result_p = std::any_cast<std::pair<std::array<layer24_t,N_LAYER_23>,std::array<layer22_t,N_LAYER_19>>*>(result);
+            for (int i = 0; i < N_LAYER_23; ++i ){
+                result_p->first[i] = _layer24_out[i];  
             }
-            for (int i = 0; i < N_LAYER_20; ++i ){
-                result_p->second[i] = _layer24_out[i];
+            for (int i = 0; i < N_LAYER_19; ++i ){
+                result_p->second[i] = _layer22_out[i];
             }
         }
 
