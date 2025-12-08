@@ -1,5 +1,5 @@
 VERSION=test
-TARGET=L1TSC4NGJetModel_test/NN
+TARGET=L1TSC4NGJetModel/NN
 mkdir -p $TARGET
 SRC=L1TSC4NGJetModel
 
