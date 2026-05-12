@@ -1,6 +1,6 @@
 .PHONY: clean
 
-L1TSC4NGJetModel_Pu.so: L1TSC4NGJetModel_emulator_Pu.o L1TSC4NGJetModel_Pu.o
+L1TSC4NGJetModel_v2_1_0.so: L1TSC4NGJetModel_emulator_Pu.o L1TSC4NGJetModel_v2_1_0.o
 	$(CXX) $(CXXFLAGS) $(LD_FLAGS) -shared $^ -o $@
 
 %.o: NN/%.cpp
@@ -10,4 +10,4 @@ L1TSC4NGJetModel_Pu.so: L1TSC4NGJetModel_emulator_Pu.o L1TSC4NGJetModel_Pu.o
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm L1TSC4NGJetModel_emulator_Pu.o L1TSC4NGJetModel_Pu.o L1TSC4NGJetModel_Pu.so
+	rm L1TSC4NGJetModel_emulator_v2_1_0.o L1TSC4NGJetModel_Pu.o L1TSC4NGJetModel_v2_1_0.so
