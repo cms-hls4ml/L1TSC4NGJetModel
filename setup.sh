@@ -1,5 +1,5 @@
 VERSION=$1
-TARGET=L1TSC4NGJetModel/NN
+TARGET=L1TSC4NGJetModel_v2_0_0/NN
 mkdir -p $TARGET
 SRC=firmware
 
