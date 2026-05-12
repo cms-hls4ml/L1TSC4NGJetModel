@@ -25,25 +25,25 @@ struct ModelOutputs {
 
 class L1TSC4NGJetModel_emulator_v2_0_0 : public hls4mlEmulator::Model{
     private:
-        input_t _input[N_INPUT_1_1*N_INPUT_2_1];
-        layer24_t _layer24_out[N_LAYER_23]; // reg out
-        layer22_t _layer22_out[N_LAYER_19]; // class out
+        input_t basic_input[16*20];
+        layer24_t reg_out[1]; // reg out
+        layer22_t class_out[8]; // class out
     public:
 
 
         virtual void prepare_input(std::any input) override {
             auto inputs = std::any_cast<ModelInputs>(input);
             // Basic inputs 16*20  for baseline inputs
-            for (int i = 0; i < N_INPUT_1_1; ++i) { // Iterate through candidates
-                for (int j = 0; j < N_INPUT_2_1; ++j) { // Iterate through features
-                    _input[i*N_INPUT_2_1 + j] = input_t(inputs.candidate_inputs[i*inputs.total_candidate_inputs + j] );
+            for (int i = 0; i < 16; ++i) { // Iterate through candidates
+                for (int j = 0; j < 20; ++j) { // Iterate through features
+                    basic_input[i*20 + j] = input_t(inputs.candidate_inputs[i*inputs.total_candidate_inputs + j] );
                 }
             }
         }
 
         virtual void predict()
         {
-            L1TSC4NGJetModel_v2_0_0(_input, _layer22_out, _layer24_out);
+            L1TSC4NGJetModel_v2_0_0(basic_input, class_out, reg_out);
             
         }
 
@@ -51,12 +51,12 @@ class L1TSC4NGJetModel_emulator_v2_0_0 : public hls4mlEmulator::Model{
         { 
             auto *results_p = std::any_cast<ModelOutputs*>(result);
             // Basic output 1 regression output
-            for (int i = 0; i < N_LAYER_23; ++i ){
-                results_p->jet_regression_output[i] = inputtype(_layer24_out[i]);  
+            for (int i = 0; i < 1; ++i ){
+                results_p->jet_regression_output[i] = inputtype(reg_out[i]);  
             }
             // Basic output 8 class outputs
-            for (int i = 0; i < N_LAYER_19; ++i ){
-                results_p->jet_class_output[i] = inputtype(_layer22_out[i]);
+            for (int i = 0; i < 8; ++i ){
+                results_p->jet_class_output[i] = inputtype(class_out[i]);
             }
         }
 
