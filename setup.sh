@@ -7,6 +7,7 @@ SRC=firmware
 cp -r $SRC/defines.h ${TARGET}
 sed -i "s/#include <cstdio>/#include <cstdio>\n\nnamespace hls4ml_L1TSC4NGJetModel_$MODEL_VERSION {/" ${TARGET}/defines.h
 echo '}' >> ${TARGET}/defines.h
+sed -i '/#include <tuple>/d' ${TARGET}/defines.h
 
 cp $SRC/L1TSC4NGJetModel.cpp   ${TARGET}/L1TSC4NGJetModel_$MODEL_VERSION.cpp
 sed -i "s/void L1TSC4NGJetModel(/void L1TSC4NGJetModel_$MODEL_VERSION(/" ${TARGET}/L1TSC4NGJetModel_$MODEL_VERSION.cpp
