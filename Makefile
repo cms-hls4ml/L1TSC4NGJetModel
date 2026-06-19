@@ -1,9 +1,9 @@
 CPP_STANDARD := c++17
 CXXFLAGS := -O3 -fPIC -std=$(CPP_STANDARD) -fpermissive
 PREFIX:=.
-EMULATOR_EXTRAS := /cvmfs/cms.cern.ch/el9_amd64_gcc12/external/hls4mlEmulatorExtras/1.1.4-7f1f5ec35d8cc94e9bab71c7ff9456f1
+EMULATOR_EXTRAS := ../../hls4mlEmulatorExtras
 AP_TYPES := $(EMULATOR_EXTRAS)/include/ap_types
-HLS_ROOT := /cvmfs/cms.cern.ch/el9_amd64_gcc12/external/hls/2025.05-4da036171b10090d7d21e15c49bb27a1
+HLS_ROOT := ../../hls
 HLS4ML_INCLUDE := $(EMULATOR_EXTRAS)/include/hls4ml
 INCLUDES := -I$(HLS4ML_INCLUDE) -I$(AP_TYPES) -I$(HLS_ROOT)/include
 #LD_FLAGS := -L$(EMULATOR_EXTRAS)/lib64 -
