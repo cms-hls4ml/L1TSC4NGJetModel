@@ -50,12 +50,12 @@ class L1TSC4NGJetModel_emulator_v2_0_0 : public hls4mlEmulator::Model{
 
             // Mask inputs
             for (int i = 0; i < 16; ++i) { // Iterate through features
-                pt_mask[i] = input12_t(inputs.candidate_inputs[16 + inputs.total_candidate_inputs*i]);
+                pt_mask[i] = input14_t(inputs.candidate_inputs[16 + inputs.total_candidate_inputs*i]);
             }
 
             // Jet features
             for (int i = 0; i < 2; ++i) { // Iterate through jet features
-                jet_features[i] = input14_t(inputs.jet_inputs[i]);
+                jet_features[i] = input12_t(inputs.jet_inputs[i]);
             }
         }
 
