@@ -11,9 +11,11 @@
 // Prototype of top level function for C-synthesis
 namespace hls4ml_L1TSC4NGJetModel_v2_0_0 {
 void L1TSC4NGJetModel_v2_0_0(
-    input_t model_input[N_INPUT_1_1*N_INPUT_2_1],
-    layer22_t layer22_out[N_LAYER_19], layer24_t layer24_out[N_LAYER_23]
+    input_t basic_input[16*21], input32_t constituent_fraction[16], input12_t jet_features[2], input14_t pt_mask[16],
+    layer39_t layer39_out[9], layer40_t layer40_out[1]
 );
+
+// hls-fpga-machine-learning insert emulator-defines
 
 
 }

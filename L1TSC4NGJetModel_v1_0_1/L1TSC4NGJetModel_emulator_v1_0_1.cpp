@@ -9,38 +9,54 @@
 
 using namespace hls4ml_L1TSC4NGJetModel_v1_0_1;
 
+typedef ap_fixed<64, 32,AP_RND,AP_SAT,0> inputtype;
+
+struct ModelInputs {
+    inputtype* candidate_inputs;
+    inputtype* jet_inputs;
+    int total_candidate_inputs;
+    int total_jet_inputs;
+};
+
+struct ModelOutputs {
+    inputtype* jet_class_output;
+    inputtype* jet_regression_output;
+};
+
 class L1TSC4NGJetModel_emulator_v1_0_1 : public hls4mlEmulator::Model{
     private:
-        input_t _input[N_INPUT_1_1*N_INPUT_2_1];
-        layer24_t _layer24_out[N_LAYER_23]; // reg out
-        layer22_t _layer22_out[N_LAYER_19]; // class out
+        input_t basic_input[16*20];
+        layer24_t reg_out[1]; // reg out
+        layer22_t class_out[8]; // class out
     public:
 
 
-        virtual void prepare_input(std::any input)
-        {
-            input_t* input_p = std::any_cast<input_t*>(input);
-            for(int i = 0; i < N_INPUT_1_1*N_INPUT_2_1; ++i){
-                _input[i] = std::any_cast<input_t>(input_p[i]);
+        virtual void prepare_input(std::any input) override {
+            auto inputs = std::any_cast<ModelInputs>(input);
+            // Basic inputs 16*20  for baseline inputs
+            for (int i = 0; i < 16; ++i) { // Iterate through candidates
+                for (int j = 0; j < 20; ++j) { // Iterate through features
+                    basic_input[i*20 + j] = input_t(inputs.candidate_inputs[i*inputs.total_candidate_inputs + j] );
+                }
             }
         }
 
-
-
         virtual void predict()
         {
-            L1TSC4NGJetModel_v1_0_1(_input, _layer22_out, _layer24_out);
+            L1TSC4NGJetModel_v1_0_1(basic_input, class_out, reg_out);
             
         }
 
         virtual void read_result(std::any result)
         { 
-            std::pair<std::array<layer24_t,N_LAYER_23>,std::array<layer22_t,N_LAYER_19>> *result_p = std::any_cast<std::pair<std::array<layer24_t,N_LAYER_23>,std::array<layer22_t,N_LAYER_19>>*>(result);
-            for (int i = 0; i < N_LAYER_23; ++i ){
-                result_p->first[i] = _layer24_out[i];  
+            auto *results_p = std::any_cast<ModelOutputs*>(result);
+            // Basic output 1 regression output
+            for (int i = 0; i < 1; ++i ){
+                results_p->jet_regression_output[i] = inputtype(reg_out[i]);  
             }
-            for (int i = 0; i < N_LAYER_19; ++i ){
-                result_p->second[i] = _layer22_out[i];
+            // Basic output 8 class outputs
+            for (int i = 0; i < 8; ++i ){
+                results_p->jet_class_output[i] = inputtype(class_out[i]);
             }
         }
 

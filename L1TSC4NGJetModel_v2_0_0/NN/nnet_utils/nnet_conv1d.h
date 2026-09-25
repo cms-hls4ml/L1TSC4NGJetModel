@@ -4,6 +4,7 @@
 #include "nnet_common.h"
 #include "nnet_conv1d_latency.h"
 #include "nnet_conv1d_resource.h"
+#include "nnet_function_stubs.h"
 #include <cstdlib>
 
 namespace nnet {
@@ -35,80 +36,16 @@ template <class data_T, class res_T, typename CONFIG_T>
 void conv_1d_cl(data_T data[CONFIG_T::in_width * CONFIG_T::n_chan], res_T res[CONFIG_T::out_width * CONFIG_T::n_filt],
                 typename CONFIG_T::weight_t weights[CONFIG_T::filt_width * CONFIG_T::n_chan * CONFIG_T::n_filt],
                 typename CONFIG_T::bias_t biases[CONFIG_T::n_filt]) {
-                    
-    constexpr unsigned mult_n_in = CONFIG_T::filt_width * CONFIG_T::n_chan;
-    constexpr unsigned mult_n_out = CONFIG_T::n_filt;
+    // Inlining helps reduce latency, but may also cause timing issues in some cases, use carefully.
+    // But without inlining Vitis HLS doesn't respect the parallelization factor config ¯\_(ツ)_/
+    // Vitis2025.1 hangs in RTL simulation with this, though
 
-    #pragma HLS PIPELINE
+    #pragma HLS INLINE recursive
 
-    data_T data_buf[CONFIG_T::n_pixels][mult_n_in];
-    #pragma HLS ARRAY_PARTITION variable=data_buf complete dim=0
+    // #pragma HLS PIPELINE II = CONFIG_T::reuse_factor * CONFIG_T::n_partitions
+    // ↑ This makes II=2 in for all n_partitions > 1, no matter what the actual II should be
 
-    typename CONFIG_T::accum_t mult[mult_n_in * mult_n_out];
-    #pragma HLS ARRAY_PARTITION variable=mult complete
-
-    typename CONFIG_T::accum_t acc[mult_n_out];
-    #pragma HLS ARRAY_PARTITION variable=acc complete
-
-    #pragma HLS ARRAY_PARTITION variable=weights complete
-    #pragma HLS ARRAY_PARTITION variable=biases complete
-
-    // Limit multipliers to control parallelization
-    #pragma HLS ALLOCATION operation instances=mul limit=4096
-
-    PartitionLoop:
-    for (int i_part = 0; i_part < CONFIG_T::n_partitions; i_part++) {
-        #pragma HLS PIPELINE II=CONFIG_T::reuse_factor rewind
-
-        CONFIG_T::template fill_buffer<data_T, CONFIG_T>::fill_buffer(data, data_buf, i_part);
-
-    PixelLoop:
-        for (unsigned i_pxl = 0; i_pxl < CONFIG_T::n_pixels; i_pxl++) {
-            #pragma HLS UNROLL
-
-            data_T cache;
-
-        // Do the matrix-multiply
-        Product1:
-            for (int i_in = 0; i_in < mult_n_in; i_in++) {
-                #pragma HLS UNROLL
-                cache = data_buf[i_pxl][i_in];
-            Product2:
-                for (int i_out = 0; i_out < mult_n_out; i_out++) {
-                    #pragma HLS UNROLL
-                    mult[i_in * mult_n_out + i_out] =
-                        CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(
-                            cache, weights[i_in * mult_n_out + i_out]);
-                }
-            }
-
-        // Initialize accumulator with input biases
-        ResetAccum:
-            for (int i_acc = 0; i_acc < mult_n_out; i_acc++) {
-                #pragma HLS UNROLL
-                acc[i_acc] = (typename CONFIG_T::accum_t)biases[i_acc];
-            }
-
-        // Accumulate multiplication result
-        Accum1:
-            for (int i_in = 0; i_in < mult_n_in; i_in++) {
-                #pragma HLS UNROLL
-            Accum2:
-                for (int i_out = 0; i_out < mult_n_out; i_out++) {
-                    #pragma HLS UNROLL
-                    acc[i_out] += mult[i_in * mult_n_out + i_out];
-                }
-            }
-
-        // Cast to "res_t" type
-        Result:
-            for (int i_res = 0; i_res < mult_n_out; i_res++) {
-                #pragma HLS UNROLL
-                res[i_part * CONFIG_T::n_pixels * mult_n_out + i_pxl * mult_n_out + i_res] =
-                    cast<data_T, res_T, typename CONFIG_T::mult_config>(acc[i_res]);
-            }
-        }
-    }
+    CONFIG_T::template conv_kernel<data_T, res_T, CONFIG_T>::conv(data, res, weights, biases);
 }
 
 template <class data_T, class res_T, typename CONFIG_T>
@@ -118,80 +55,77 @@ void pointwise_conv_1d_cl(data_T data[CONFIG_T::in_width * CONFIG_T::n_chan],
                           typename CONFIG_T::bias_t biases[CONFIG_T::n_filt]) {
     assert(CONFIG_T::filt_width == 1);
 
-    constexpr unsigned mult_n_in = CONFIG_T::filt_width * CONFIG_T::n_chan;
-    constexpr unsigned mult_n_out = CONFIG_T::n_filt;
+    // Inlining helps reduce latency, but may also cause timing issues in some cases, use carefully.
+    // But without inlining Vitis HLS doesn't respect the parallelization factor config ¯\_(ツ)_/¯
 
-    #pragma HLS PIPELINE
+    #pragma HLS INLINE recursive
 
-    data_T data_buf[CONFIG_T::n_pixels][mult_n_in];
-    #pragma HLS ARRAY_PARTITION variable=data_buf complete dim=0
+    // #pragma HLS PIPELINE II = CONFIG_T::reuse_factor * CONFIG_T::n_partitions
+    // ↑ This makes II=2 in for all n_partitions > 1, no matter what the actual II should be
 
-    typename CONFIG_T::accum_t mult[mult_n_in * mult_n_out];
-    #pragma HLS ARRAY_PARTITION variable=mult complete
+    CONFIG_T::template conv_kernel<data_T, res_T, CONFIG_T>::conv(data, res, weights, biases);
+}
 
-    typename CONFIG_T::accum_t acc[mult_n_out];
-    #pragma HLS ARRAY_PARTITION variable=acc complete
+template <class data_T, class res_T, typename CONFIG_T>
+class Conv1DLatency : public nnet::Conv1DKernel<data_T, res_T, CONFIG_T> {
+  public:
+    static void conv(data_T data[CONFIG_T::in_width * CONFIG_T::n_chan], res_T res[CONFIG_T::out_width * CONFIG_T::n_filt],
+                     typename CONFIG_T::weight_t weights[CONFIG_T::filt_width * CONFIG_T::n_chan * CONFIG_T::n_filt],
+                     typename CONFIG_T::bias_t biases[CONFIG_T::n_filt]) {
+        // #pragma HLS INLINE recursive
+        conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data, res, weights, biases);
+    }
+};
 
-    #pragma HLS ARRAY_PARTITION variable=weights complete
-    #pragma HLS ARRAY_PARTITION variable=biases complete
+template <class data_T, class res_T, typename CONFIG_T>
+class Conv1DResource : public nnet::Conv1DKernel<data_T, res_T, CONFIG_T> {
+  public:
+    static void conv(data_T data[CONFIG_T::in_width * CONFIG_T::n_chan], res_T res[CONFIG_T::out_width * CONFIG_T::n_filt],
+                     typename CONFIG_T::weight_t weights[CONFIG_T::filt_width * CONFIG_T::n_chan * CONFIG_T::n_filt],
+                     typename CONFIG_T::bias_t biases[CONFIG_T::n_filt]) {
+        // #pragma HLS INLINE recursive
+        conv_1d_resource_cl<data_T, res_T, CONFIG_T>(data, res, weights, biases);
+    }
+};
 
-    // Limit multipliers to control parallelization
-    #pragma HLS ALLOCATION operation instances=mul limit=4096
+template <class data_T, class res_T, typename CONFIG_T>
+class BatchedDenseForConv1D : public nnet::Conv1DKernel<data_T, res_T, CONFIG_T> {
+  public:
+    static void conv(data_T data[CONFIG_T::in_width * CONFIG_T::n_chan], res_T res[CONFIG_T::out_width * CONFIG_T::n_filt],
+                     typename CONFIG_T::weight_t weights[CONFIG_T::n_chan * CONFIG_T::n_filt],
+                     typename CONFIG_T::bias_t biases[CONFIG_T::n_filt]) {
 
-    PartitionLoop:
-    for (int i_part = 0; i_part < CONFIG_T::n_partitions; i_part++) {
-        #pragma HLS PIPELINE II=CONFIG_T::reuse_factor rewind
+        #pragma HLS PIPELINE II = CONFIG_T::reuse_factor * CONFIG_T::n_partitions
+        #pragma HLS INLINE RECURSIVE
+        data_T data_tmp[CONFIG_T::n_partitions][CONFIG_T::in_width * CONFIG_T::n_chan / CONFIG_T::n_partitions];
+        #pragma HLS ARRAY_PARTITION variable=data_tmp complete dim=0
+        res_T res_tmp[CONFIG_T::n_partitions][CONFIG_T::out_width * CONFIG_T::n_filt / CONFIG_T::n_partitions];
+        #pragma HLS ARRAY_PARTITION variable=res_tmp complete dim=0
 
-        CONFIG_T::template fill_buffer<data_T, CONFIG_T>::fill_buffer(data, data_buf, i_part);
-
-    PixelLoop:
-        for (unsigned i_pxl = 0; i_pxl < CONFIG_T::n_pixels; i_pxl++) {
+        for (int jj = 0; jj < CONFIG_T::n_partitions; jj++) {
             #pragma HLS UNROLL
-
-            data_T cache;
-
-        // Do the matrix-multiply
-        Product1:
-            for (int i_in = 0; i_in < mult_n_in; i_in++) {
+            for (int ii = 0; ii < CONFIG_T::in_width * CONFIG_T::n_chan / CONFIG_T::n_partitions; ii++) {
                 #pragma HLS UNROLL
-                cache = data_buf[i_pxl][i_in];
-            Product2:
-                for (int i_out = 0; i_out < mult_n_out; i_out++) {
-                    #pragma HLS UNROLL
-                    mult[i_in * mult_n_out + i_out] =
-                        CONFIG_T::mult_config::template product<data_T, typename CONFIG_T::mult_config::weight_t>::product(
-                            cache, weights[i_in * mult_n_out + i_out]);
-                }
+                data_tmp[jj][ii] = data[jj * CONFIG_T::in_width * CONFIG_T::n_chan / CONFIG_T::n_partitions + ii];
             }
+        }
 
-        // Initialize accumulator with input biases
-        ResetAccum:
-            for (int i_acc = 0; i_acc < mult_n_out; i_acc++) {
-                #pragma HLS UNROLL
-                acc[i_acc] = (typename CONFIG_T::accum_t)biases[i_acc];
-            }
+        // #pragma HLS ALLOCATION function instances=nnet::pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T> limit=1
+        // Vitis 2025.1 crashes with this, but 2023.2 is fine. Not tested on other versions.
 
-        // Accumulate multiplication result
-        Accum1:
-            for (int i_in = 0; i_in < mult_n_in; i_in++) {
-                #pragma HLS UNROLL
-            Accum2:
-                for (int i_out = 0; i_out < mult_n_out; i_out++) {
-                    #pragma HLS UNROLL
-                    acc[i_out] += mult[i_in * mult_n_out + i_out];
-                }
-            }
+        for (int jj = 0; jj < CONFIG_T::n_partitions; jj++) {
+            nnet::pointwise_conv_1d_latency_cl<data_T, res_T, CONFIG_T>(data_tmp[jj], res_tmp[jj], weights, biases);
+        }
 
-        // Cast to "res_t" type
-        Result:
-            for (int i_res = 0; i_res < mult_n_out; i_res++) {
+        for (int jj = 0; jj < CONFIG_T::n_partitions; jj++) {
+            #pragma HLS UNROLL
+            for (int ii = 0; ii < CONFIG_T::out_width * CONFIG_T::n_filt / CONFIG_T::n_partitions; ii++) {
                 #pragma HLS UNROLL
-                res[i_part * CONFIG_T::n_pixels * mult_n_out + i_pxl * mult_n_out + i_res] =
-                    cast<data_T, res_T, typename CONFIG_T::mult_config>(acc[i_res]);
+                res[jj * CONFIG_T::out_width * CONFIG_T::n_filt / CONFIG_T::n_partitions + ii] = res_tmp[jj][ii];
             }
         }
     }
-}
+};
 
 } // namespace nnet
 
