@@ -26,8 +26,8 @@ struct ModelOutputs {
 class L1TSC4NGJetModel_emulator_v1_0_2 : public hls4mlEmulator::Model{
     private:
         input_t basic_input[16*20];
-        layer24_t reg_out[1]; // reg out
-        layer22_t class_out[8]; // class out
+        pT_output_t reg_out[1]; // reg out
+        jet_id_output_t class_out[8]; // class out
     public:
 
 
