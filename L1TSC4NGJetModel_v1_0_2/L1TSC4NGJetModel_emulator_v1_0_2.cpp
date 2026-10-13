@@ -25,7 +25,7 @@ struct ModelOutputs {
 
 class L1TSC4NGJetModel_emulator_v1_0_2 : public hls4mlEmulator::Model{
     private:
-        input_t basic_input[16*20];
+        basic_input_t basic_input[16*20];
         pT_output_t reg_out[1]; // reg out
         jet_id_output_t class_out[8]; // class out
     public:
@@ -36,7 +36,7 @@ class L1TSC4NGJetModel_emulator_v1_0_2 : public hls4mlEmulator::Model{
             // Basic inputs 16*20  for baseline inputs
             for (int i = 0; i < 16; ++i) { // Iterate through candidates
                 for (int j = 0; j < 20; ++j) { // Iterate through features
-                    basic_input[i*20 + j] = input_t(inputs.candidate_inputs[i*inputs.total_candidate_inputs + j] );
+                    basic_input[i*20 + j] = basic_input_t(inputs.candidate_inputs[i*inputs.total_candidate_inputs + j] );
                 }
             }
         }
